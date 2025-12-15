@@ -127,23 +127,23 @@ function App() {
       }
     })
 
-    // Convert to arrays and sort
+    // Convert to arrays and sort by play count
     const topArtists = Object.values(artistStats)
-      .sort((a, b) => b.playtime_ms - a.playtime_ms)
+      .sort((a, b) => b.play_count - a.play_count)
       .map(artist => ({
         ...artist,
         playtime_minutes: Math.floor(artist.playtime_ms / 60000)
       }))
 
     const topSongs = Object.values(songStats)
-      .sort((a, b) => b.playtime_ms - a.playtime_ms)
+      .sort((a, b) => b.play_count - a.play_count)
       .map(song => ({
         ...song,
         playtime_minutes: Math.floor(song.playtime_ms / 60000)
       }))
 
     const topAlbums = Object.values(albumStats)
-      .sort((a, b) => b.playtime_ms - a.playtime_ms)
+      .sort((a, b) => b.play_count - a.play_count)
       .map(album => ({
         ...album,
         playtime_minutes: Math.floor(album.playtime_ms / 60000)
@@ -424,7 +424,12 @@ function App() {
               <button onClick={() => handlePresetRange('lastMonth')} className="preset-btn">Last Month</button>
               <button onClick={() => handlePresetRange('thisYear')} className="preset-btn">This Year</button>
               <button onClick={() => handlePresetRange('lastYear')} className="preset-btn">Last Year</button>
-              <button onClick={() => handlePresetRange('allTime')} className="preset-btn active">All Time</button>
+              <button
+                onClick={() => handlePresetRange('allTime')}
+                className={`preset-btn ${!dateRange.start && !dateRange.end ? 'active' : ''}`}
+              >
+                All Time
+              </button>
 
               <div className="custom-dropdown-wrapper">
                 <button
@@ -542,27 +547,27 @@ function App() {
               <h2>Top 5 Songs</h2>
               <div className="song-list">
                 {spotifyData.top_songs.slice(0, 5).map((song, index) => (
-                  <div key={index} className="song-item">
-                    <div className="song-rank">{index + 1}</div>
-                    <div className="song-info">
-                      <div className="song-name">{song.name}</div>
-                      <div className="song-stats">
-                        {formatTime(song.playtime_ms)} • {song.play_count} plays
+                    <div key={index} className="song-item">
+                      <div className="song-rank">{index + 1}</div>
+                      <div className="song-info">
+                        <div className="song-name">{song.name}</div>
+                        <div className="song-stats">
+                          {formatTime(song.playtime_ms)} • {song.play_count} plays
+                        </div>
                       </div>
+                      {song.spotify_uri && (
+                        <a
+                          href={getSpotifyUrl(song.spotify_uri)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="spotify-link"
+                          title="Open in Spotify"
+                        >
+                          <span className="spotify-icon">▶</span>
+                        </a>
+                      )}
                     </div>
-                    {song.spotify_uri && (
-                      <a
-                        href={getSpotifyUrl(song.spotify_uri)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="spotify-link"
-                        title="Open in Spotify"
-                      >
-                        <span className="spotify-icon">▶</span>
-                      </a>
-                    )}
-                  </div>
-                ))}
+                  ))}
               </div>
             </div>
           </div>

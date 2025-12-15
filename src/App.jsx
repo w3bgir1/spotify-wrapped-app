@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import './App.css'
+import TimelineChart from './TimelineChart'
 
 function App() {
   const [activeTab, setActiveTab] = useState('overview')
@@ -38,6 +39,74 @@ function App() {
       return `https://open.spotify.com/${type}/${id}`
     }
     return null
+  }
+
+  const processTimelineData = (allStreams) => {
+    const dailyData = {}
+    const weeklyData = {}
+    const monthlyData = {}
+
+    allStreams.forEach(stream => {
+      const streamDate = new Date(stream.ts || stream.endTime || stream.timestamp)
+      if (isNaN(streamDate.getTime())) return
+
+      // Daily
+      const dayKey = streamDate.toISOString().split('T')[0]
+      if (!dailyData[dayKey]) {
+        dailyData[dayKey] = { date: dayKey, plays: 0 }
+      }
+      dailyData[dayKey].plays += 1
+
+      // Weekly (get week start date - Monday)
+      const weekStart = new Date(streamDate)
+      const day = weekStart.getDay()
+      const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1) // adjust when day is Sunday
+      weekStart.setDate(diff)
+      const weekKey = weekStart.toISOString().split('T')[0]
+      if (!weeklyData[weekKey]) {
+        weeklyData[weekKey] = { date: weekKey, plays: 0 }
+      }
+      weeklyData[weekKey].plays += 1
+
+      // Monthly
+      const monthKey = `${streamDate.getFullYear()}-${String(streamDate.getMonth() + 1).padStart(2, '0')}`
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = { date: monthKey, plays: 0 }
+      }
+      monthlyData[monthKey].plays += 1
+    })
+
+    // Convert to arrays and sort by date
+    const formatDailyDate = (dateStr) => {
+      const d = new Date(dateStr)
+      return `${d.getDate()}/${d.getMonth() + 1}`
+    }
+
+    const formatWeeklyDate = (dateStr) => {
+      const d = new Date(dateStr)
+      return `Week ${d.getDate()}/${d.getMonth() + 1}`
+    }
+
+    const formatMonthlyDate = (dateStr) => {
+      const [year, month] = dateStr.split('-')
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      return `${monthNames[parseInt(month) - 1]} ${year}`
+    }
+
+    return {
+      daily: Object.values(dailyData)
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .slice(-30) // Last 30 days
+        .map(d => ({ ...d, date: formatDailyDate(d.date) })),
+      weekly: Object.values(weeklyData)
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .slice(-12) // Last 12 weeks
+        .map(d => ({ ...d, date: formatWeeklyDate(d.date) })),
+      monthly: Object.values(monthlyData)
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .slice(-12) // Last 12 months
+        .map(d => ({ ...d, date: formatMonthlyDate(d.date) }))
+    }
   }
 
   const processRawSpotifyData = (rawDataArrays, startDate = null, endDate = null) => {
@@ -149,6 +218,9 @@ function App() {
         playtime_minutes: Math.floor(album.playtime_ms / 60000)
       }))
 
+    // Process timeline data
+    const timelineData = processTimelineData(allStreams)
+
     return {
       year: new Date().getFullYear(),
       total_streams: allStreams.length,
@@ -160,7 +232,8 @@ function App() {
       total_hours: Math.floor(totalPlaytimeMs / 3600000),
       top_artists: topArtists,
       top_songs: topSongs,
-      top_albums: topAlbums
+      top_albums: topAlbums,
+      timeline: timelineData
     }
   }
 
@@ -528,6 +601,10 @@ function App() {
       <div className="content">
         {activeTab === 'overview' && (
           <div className="overview">
+            {spotifyData.timeline && (
+              <TimelineChart timelineData={spotifyData.timeline} />
+            )}
+
             <div className="section">
               <h2>Top 5 Artists</h2>
               <div className="podium">
